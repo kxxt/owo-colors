@@ -1,11 +1,11 @@
 [package]
-name = "owo-colors"
+name = "kxxt-owo-colors"
 version = "4.0.0"
 rust-version = "1.56"
 authors = ["jam1garner <8260240+jam1garner@users.noreply.github.com>"]
 edition = "2018"
-documentation = "https://docs.rs/owo-colors"
-repository = "https://github.com/jam1garner/owo-colors"
+documentation = "https://docs.rs/kxxt-owo-colors"
+repository = "https://github.com/kxxt/owo-colors"
 description = "Zero-allocation terminal colors that'll make people go owo"
 license = "MIT"
 readme = "README.md"

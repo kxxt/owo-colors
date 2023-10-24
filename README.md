@@ -1,3 +1,7 @@
+# This is a fork of https://github.com/jam1garner/owo-colors with some personal changes
+
+# You should go to https://github.com/jam1garner/owo-colors instead
+
 # <img src="https://jam1.re/img/rust_owo.svg" height="100"> Colors
 
 [![Current Crates.io Version](https://img.shields.io/crates/v/owo-colors.svg)](https://crates.io/crates/owo-colors)
