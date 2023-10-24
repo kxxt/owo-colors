@@ -504,14 +504,32 @@ impl<T> Styled<T> {
 }
 
 macro_rules! impl_fmt {
+    (@@impl_code_path, $f:ident, $self:ident, @@$phase:ident) => {
+        cfg_if::cfg_if!{
+            if #[cfg(feature = "global-colorized-control")]{
+                if crate::control::should_colorize() {
+                    impl_fmt!(@@$phase, $f, $self);
+                }
+            } else {
+                impl_fmt!(@@$phase, $f, $self);
+            }
+        }
+    };
+    (@@before, $f:ident, $self:ident) => {
+        $self.style.fmt_prefix($f)?;
+    };
+    (@@after, $f:ident, $self:ident) => {
+        $self.style.fmt_suffix($f)?;
+    };
     ($($trait:path),* $(,)?) => {
         $(
             impl<T: $trait> $trait for Styled<T> {
                 #[allow(unused_assignments)]
                 fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    self.style.fmt_prefix(f)?;
+                    impl_fmt!(@@impl_code_path, f, self, @@before);
                     <T as $trait>::fmt(&self.target, f)?;
-                    self.style.fmt_suffix(f)
+                    impl_fmt!(@@impl_code_path, f, self, @@after);
+                    Ok(())
                 }
             }
         )*

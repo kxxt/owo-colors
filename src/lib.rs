@@ -73,13 +73,15 @@
 //! let text = "red text, white background, struck through";
 //! println!("{}", text.style(my_style));
 //! ```
-#![cfg_attr(not(test), no_std)]
+#![cfg_attr(all(not(test), not(feature = "global-colorized-control")), no_std)]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 #![doc(html_logo_url = "https://jam1.re/img/rust_owo.svg")]
 #![warn(missing_docs)]
 
 pub mod colors;
 mod combo;
+#[cfg(feature = "global-colorized-control")]
+pub mod control;
 mod dyn_colors;
 mod dyn_styles;
 mod styled_list;

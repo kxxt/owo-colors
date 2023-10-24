@@ -16,18 +16,46 @@ pub struct ComboColorDisplay<'a, Fg: Color, Bg: Color, T>(&'a T, PhantomData<(Fg
 pub struct ComboDynColorDisplay<'a, Fg: DynColor, Bg: DynColor, T>(&'a T, Fg, Bg);
 
 macro_rules! impl_fmt_for_combo {
+    (@@impl_code_path, $f:ident, $self:ident, @@$phase:ident, $target:ident) => {
+        cfg_if::cfg_if!{
+            if #[cfg(feature = "global-colorized-control")]{
+                if crate::control::should_colorize() {
+                    impl_fmt_for_combo!(@@$phase, $target, $f, $self);
+                }
+            } else {
+                impl_fmt_for_combo!(@@$phase, $target, $f, $self);
+            }
+        }
+    };
+    (@@before, color, $f:ident, $self:ident) => {
+        $f.write_str("\x1b[")?;
+        $f.write_str(Fg::RAW_ANSI_FG)?;
+        $f.write_str(";")?;
+        $f.write_str(Bg::RAW_ANSI_BG)?;
+        $f.write_str("m")?;
+    };
+    (@@after, color, $f:ident, $self:ident) => {
+        $f.write_str("\x1b[0m")?;
+    };
+    (@@before, dyn_color, $f:ident, $self:ident) => {
+        $f.write_str("\x1b[")?;
+        $self.1.fmt_raw_ansi_fg($f)?;
+        $f.write_str(";")?;
+        $self.2.fmt_raw_ansi_bg($f)?;
+        $f.write_str("m")?;
+    };
+    (@@after, dyn_color, $f:ident, $self:ident) => {
+        $f.write_str("\x1b[0m")?;
+    };
     ($($trait:path),* $(,)?) => {
         $(
             impl<'a, Fg: Color, Bg: Color, T: $trait> $trait for ComboColorDisplay<'a, Fg, Bg, T> {
                 #[inline(always)]
                 fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    f.write_str("\x1b[")?;
-                    f.write_str(Fg::RAW_ANSI_FG)?;
-                    f.write_str(";")?;
-                    f.write_str(Bg::RAW_ANSI_BG)?;
-                    f.write_str("m")?;
+                    impl_fmt_for_combo!(@@impl_code_path, f, self, @@before, color);
                     <T as $trait>::fmt(&self.0, f)?;
-                    f.write_str("\x1b[0m")
+                    impl_fmt_for_combo!(@@impl_code_path, f, self, @@after, color);
+                    Ok(())
                 }
             }
         )*
@@ -36,13 +64,10 @@ macro_rules! impl_fmt_for_combo {
             impl<'a, Fg: DynColor, Bg: DynColor, T: $trait> $trait for ComboDynColorDisplay<'a, Fg, Bg, T> {
                 #[inline(always)]
                 fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    f.write_str("\x1b[")?;
-                    self.1.fmt_raw_ansi_fg(f)?;
-                    f.write_str(";")?;
-                    self.2.fmt_raw_ansi_bg(f)?;
-                    f.write_str("m")?;
+                    impl_fmt_for_combo!(@@impl_code_path, f, self, @@before, dyn_color);
                     <T as $trait>::fmt(&self.0, f)?;
-                    f.write_str("\x1b[0m")
+                    impl_fmt_for_combo!(@@impl_code_path, f, self, @@after, dyn_color);
+                    Ok(())
                 }
             }
         )*

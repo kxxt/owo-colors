@@ -125,23 +125,48 @@ colors! {
 }
 
 macro_rules! impl_fmt_for {
+    (@@impl_code_path, $f:ident, @@$phase:ident, $target:ident) => {
+        cfg_if::cfg_if!{
+            if #[cfg(feature = "global-colorized-control")]{
+                if crate::control::should_colorize() {
+                    impl_fmt_for!(@@$phase, $f, $target);
+                }
+            } else {
+                impl_fmt_for!(@@$phase, $f, $target);
+            }
+        }
+    };
+    (@@before, $f:ident, fg) => {
+        $f.write_str(Color::ANSI_FG)?;
+    };
+    (@@after, $f:ident, fg) => {
+        $f.write_str("\x1b[39m")?;
+    };
+    (@@before, $f:ident, bg) => {
+        $f.write_str(Color::ANSI_BG)?;
+    };
+    (@@after, $f:ident, bg) => {
+        $f.write_str("\x1b[49m")?;
+    };
     ($($trait:path),* $(,)?) => {
         $(
             impl<'a, Color: crate::Color, T: $trait> $trait for FgColorDisplay<'a, Color, T> {
                 #[inline(always)]
                 fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    f.write_str(Color::ANSI_FG)?;
+                    impl_fmt_for!(@@impl_code_path, f, @@before, fg);
                     <T as $trait>::fmt(&self.0, f)?;
-                    f.write_str("\x1b[39m")
+                    impl_fmt_for!(@@impl_code_path, f, @@after, fg);
+                    Ok(())
                 }
             }
 
             impl<'a, Color: crate::Color, T: $trait> $trait for BgColorDisplay<'a, Color, T> {
                 #[inline(always)]
                 fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    f.write_str(Color::ANSI_BG)?;
+                    impl_fmt_for!(@@impl_code_path, f, @@before, bg);
                     <T as $trait>::fmt(&self.0, f)?;
-                    f.write_str("\x1b[49m")
+                    impl_fmt_for!(@@impl_code_path, f, @@after, bg);
+                    Ok(())
                 }
             }
         )*
@@ -161,23 +186,48 @@ impl_fmt_for! {
 }
 
 macro_rules! impl_fmt_for_dyn {
+    (@@impl_code_path, $f:ident, $self:ident, @@$phase:ident, $target:ident) => {
+        cfg_if::cfg_if!{
+            if #[cfg(feature = "global-colorized-control")]{
+                if crate::control::should_colorize() {
+                    impl_fmt_for_dyn!(@@$phase, $f, $self, $target);
+                }
+            } else {
+                impl_fmt_for_dyn!(@@$phase, $f, $self, $target);
+            }
+        }
+    };
+    (@@before, $f:ident,$self:ident, fg) => {
+        ($self.1).fmt_ansi_fg($f)?;
+    };
+    (@@after, $f:ident,$self:ident, fg) => {
+        $f.write_str("\x1b[39m")?;
+    };
+    (@@before, $f:ident, $self:ident, bg) => {
+        ($self.1).fmt_ansi_bg($f)?;
+    };
+    (@@after, $f:ident, $self:ident, bg) => {
+        $f.write_str("\x1b[49m")?;
+    };
     ($($trait:path),* $(,)?) => {
         $(
             impl<'a, Color: crate::DynColor, T: $trait> $trait for FgDynColorDisplay<'a, Color, T> {
                 #[inline(always)]
                 fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    (self.1).fmt_ansi_fg(f)?;
+                    impl_fmt_for_dyn!(@@impl_code_path, f, self, @@before, fg);
                     <T as $trait>::fmt(&self.0, f)?;
-                    f.write_str("\x1b[39m")
+                    impl_fmt_for_dyn!(@@impl_code_path, f, self, @@after, fg);
+                    Ok(())
                 }
             }
 
             impl<'a, Color: crate::DynColor, T: $trait> $trait for BgDynColorDisplay<'a, Color, T> {
                 #[inline(always)]
                 fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    (self.1).fmt_ansi_bg(f)?;
+                    impl_fmt_for_dyn!(@@impl_code_path, f, self, @@before, bg);
                     <T as $trait>::fmt(&self.0, f)?;
-                    f.write_str("\x1b[49m")
+                    impl_fmt_for_dyn!(@@impl_code_path, f, self, @@after, bg);
+                    Ok(())
                 }
             }
         )*

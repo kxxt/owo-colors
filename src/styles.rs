@@ -5,13 +5,31 @@ use core::fmt;
 use crate::OwoColorize;
 
 macro_rules! impl_fmt_for_style {
+    (@@impl_code_path, $f:ident, $l:literal, $phase:ident) => {
+        cfg_if::cfg_if!{
+            if #[cfg(feature = "global-colorized-control")]{
+                if crate::control::should_colorize() {
+                    impl_fmt_for_style!(@@$phase, $f, $l);
+                }
+            } else {
+                impl_fmt_for_style!(@@$phase, $f, $l);
+            }
+        }
+    };
+    (@@before, $f:ident, $l:literal) => {
+        $f.write_str($l)?;
+    };
+    (@@after, $f:ident, $l:literal) => {
+        $f.write_str("\x1b[0m")?;
+    };
     ($(($ty:ident, $trait:path, $ansi:literal)),* $(,)?) => {
         $(
             impl<'a, T: $trait> $trait for $ty<'a, T> {
                 fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                    f.write_str($ansi)?;
+                    impl_fmt_for_style!(@@impl_code_path, f, $ansi, before);
                     <_ as $trait>::fmt(&self.0, f)?;
-                    f.write_str("\x1b[0m")
+                    impl_fmt_for_style!(@@impl_code_path, f, $ansi, after);
+                    Ok(())
                 }
             }
         )*
